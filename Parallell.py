@@ -42,6 +42,21 @@ def R_theory(w,bg,delta, sigma):
             r_array[i] = r2
     return r_array
 
+# def lg_theory(w,delta, mu):
+#     # ONLY FOR bg = 0 AND R = 1
+#     lg_array = np.zeros((delta.size),dtype=float)
+#     for i in range(0,delta.size):
+#         lg1 = (w[i,2]+np.power(w[i,1],2))/w[i,0]
+#         lg2 = delta[i]/w[i,1] - mu
+#         lg_array[i]= lg1*lg2
+#     return lg_array
+def lg_Biomass(w,delta, MU, gamma_arr):
+    bio_array = np.zeros((delta.size), dtype = float)
+    for i in range(0,delta.size):
+        sigma_sq = 1/(w[i,2]+np.power(w[i,1],2))
+        b = delta[i]/w[i,1] - MU - gamma_arr[i]*sigma_sq
+        bio_array[i] = 1/b
+    return bio_array
 
 def Biomass(w,big_gamma,delta,r,gamma, MU):
     bio_array = np.zeros((delta.size), dtype = float)
@@ -582,6 +597,50 @@ def vary_c(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, col_arr, sig
         ax_2.set_ylabel('Fraction of Surviving Species, $\\phi$')
 
         plt.show()
+
+def vary_lg_new(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, w_array, delta, filename):
+    args_list = []
+    plt.figure(figsize=(10, 6))
+    gamma_arr = np.linspace(-5,5,len(delta))
+    plt.plot(gamma_arr, lg_Biomass(w_array,delta, MU, gamma_arr))
+    for GAMMA in gamma_arr:
+        args_list.append((SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N))
+    if __name__ == '__main__':
+        # Set the number of parallel processes
+        num_processes = joblib.cpu_count()
+
+        # Use Parallel to parallelize the execution
+        results = joblib.Parallel(n_jobs=num_processes)(
+            joblib.delayed(run_lv)(args) for args in args_list)
+        
+        # process the results
+        biomass_values = [result[0] for result in results]  # Extract values[1] from results
+        # Create a graph
+        # plt.figure(figsize=(10, 6))
+        plt.scatter(gamma_arr, biomass_values, marker='x')
+        # Create a DataFrame with the data
+        data = {'GAMMA': gamma_arr, 'Biomass': biomass_values}
+        df = pd.DataFrame(data)
+
+        # Save the DataFrame to a CSV file
+        df.to_csv('gamma_M.csv', index=False)
+
+        # plt.plot(gamma_arr, lg_Biomass(w_array,delta, MU, gamma_arr))
+        plt.xlabel(r'$\gamma$', fontsize=17)
+        plt.ylabel(r'$M$',fontsize=17)
+        plt.xlim(-5,6.25)
+        plt.ylim(0,1.2)
+        plt.tick_params(axis='both', which='major', labelsize=12)  # Adjust the labelsize as needed
+        plt.show()
+    
+    
+    
+    
+    
+    
+    
+    
+    
 def r_phi(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, row_arr, w_array, delta, filename):
     args_list = []
     plt.figure(figsize=(10, 6))
@@ -614,27 +673,27 @@ def r_phi(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, row_arr, w_ar
         plt.xlim(0,6.25)
         plt.ylim(.5,.9)
         plt.tick_params(axis='both', which='major', labelsize=12)  # Adjust the labelsize as needed
-        plt.show()
+        # plt.show()
 
 #################################################################
 #################################################################
 #Run-time constants
-T_MIN = 0.0
-T_MAX = 100.0
-DT = 0.01
-iterations = 100
-N = 500
+# T_MIN = 0.0
+# T_MAX = 100.0
+# DT = 0.01
+# iterations = 100
+# N = 500
 
-# Parameter Constants
-delta = np.linspace(0,5, num = 100000)
-w_array = W_calc(delta)
+# # Parameter Constants
+# delta = np.linspace(-5,50, num = 100000)
+# w_array = W_calc(delta)
 
-MU = -1.0
-COLUMN = 10.0 # GREATER THAM GAMMA^2/R
-BIG_GAMMA = 0.0 # Predator Prey
-GAMMA  = 0.0
-ROW = 0.0
-SIGMA = 0.0 
+# MU = -1.0
+# COLUMN = 10.0 # GREATER THAM GAMMA^2/R
+# BIG_GAMMA = 0.0 # Predator Prey
+# GAMMA  = 0.0
+# ROW = 0.0
+# SIGMA = 0.0 
 #######################################################################
 #######################################################################
 # row_sigma_dict = {0: np.arange(0,1.8,1.8/6),
@@ -691,35 +750,59 @@ SIGMA = 0.0
 
 
 
-
-
-
-
-
-
-
-
-##FIGURE 4(WORKS)
+##NEW LG M
 T_MIN = 0.0
 T_MAX = 100.0
 DT = 0.01
-iterations = 100
+iterations = 50
 N = 500
 
 # Parameter Constants
-delta = np.linspace(0,5, num = 100000)
+delta = np.linspace(-5,50, num = 10000)
 w_array = W_calc(delta)
 
-MU = -1.0
-COLUMN = 10.0 # GREATER THAM GAMMA^2/R
+MU = -8.0
+COLUMN = 30.0 # GREATER THAM GAMMA^2/R
 BIG_GAMMA = 0.0 # Predator Prey
 GAMMA  = 0.0
-ROW = 0.0
-SIGMA = 0.0 
+ROW = 1.0
+SIGMA = 0.5
+
+ 
+# filename = 'test.csv'
+# vary_lg_new(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, w_array, delta, filename)
+df = pd.read_csv('gamma_M.csv')
+import seaborn as sns
+sns.lineplot(data=df, x='GAMMA', y='Biomass', marker='o')
+plt.plot(gamma_arr, lg_Biomass(w_array,delta, MU, gamma_arr))
+
+plt.xlim(-5,5)
+# plt.ylim(0,1)
 
 
 
-row_array = np.arange(0,6.5,0.25)
-SIGMA = 0.75
-filename = 'row_test.csv'
-r_phi(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, row_array, w_array, delta, filename)
+
+# ##FIGURE 4(WORKS)
+# T_MIN = 0.0
+# T_MAX = 100.0
+# DT = 0.01
+# iterations = 100
+# N = 500
+
+# # Parameter Constants
+# delta = np.linspace(0,5, num = 100000)
+# w_array = W_calc(delta)
+
+# MU = -1.0
+# COLUMN = 10.0 # GREATER THAM GAMMA^2/R
+# BIG_GAMMA = 0.0 # Predator Prey
+# GAMMA  = 0.0
+# ROW = 0.0
+# SIGMA = 0.0 
+
+
+
+# row_array = np.arange(0,6.5,0.25)
+# SIGMA = 0.75
+# filename = 'row_test.csv'
+# r_phi(SIGMA, BIG_GAMMA, ROW, GAMMA, COLUMN, MU, iterations, N, row_array, w_array, delta, filename)
